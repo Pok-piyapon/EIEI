@@ -4,7 +4,22 @@ import './screens/home.dart';
 import './screens/login.dart';
 import './screens/register.dart';
 
-void main() {
+
+// Local Notification
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+void main() async {
+
+  WidgetsFlutterBinding.ensureInitialized();
+
+  const AndroidInitializationSettings androidSettings =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initSettings =
+      InitializationSettings(android: androidSettings);
+
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
   runApp(MyApp());
 }
 

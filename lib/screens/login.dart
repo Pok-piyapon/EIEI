@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/notify.dart';
 
 class MunicipalLoginPage extends StatefulWidget {
   @override
@@ -12,6 +13,7 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
+  final AppNotification flashNotify = AppNotification();
 
   @override
   void dispose() {
@@ -342,6 +344,9 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
 
   void _handleLogin() {
     // Show loading dialog
+    
+    flashNotify.showNotification();
+
     showDialog(
       context: context,
       barrierDismissible: false,
