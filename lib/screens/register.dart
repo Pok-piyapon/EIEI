@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
+//import '../services/api.dart';
+import "dart:convert";
 
 class MunicipalRegisterPage extends StatefulWidget {
   @override
@@ -18,6 +21,9 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _acceptTerms = false;
+
+  // Network
+  var dio = Dio();
 
   @override
   void dispose() {
@@ -506,8 +512,21 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
     );
   }
 
-  void _handleRegister() {
+  void _handleRegister() async {
     // Show loading dialog
+    Response res = await dio.post("https://piyapon.sinothaitrade.com/signup", data: {
+    "firstname": _firstNameController.text,
+    "lastname": _lastNameController.text,
+    "email": _emailController.text,
+    "password": _passwordController.text,
+  });
+
+  // res.data is usually already a Map<String, dynamic>
+  Map<String, dynamic> jsonData = Map<String, dynamic>.from(res.data);
+
+  String jsonString = jsonEncode(jsonData);
+  print('JSON String: $jsonString');
+
     showDialog(
       context: context,
       barrierDismissible: false,
