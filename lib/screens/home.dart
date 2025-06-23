@@ -62,7 +62,7 @@ class MunicipalHomePage extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'เทศบาลเมืองร้อยเอ็ด',
+                  'เทศบาล',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,

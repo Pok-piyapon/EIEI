@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import './screens/home.dart';
 import './screens/login.dart';
 import './screens/register.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 // Local Notification
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -28,6 +29,18 @@ final GoRouter _router = GoRouter(
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // firebase
+  var firebase = Firebase.initializeApp(
+      options: const FirebaseOptions(
+      apiKey: "AIzaSyAjK-9_HF6hRhehoMeFpCz985TZFJ5K7P8",
+      authDomain: "your_app.firebaseapp.com",
+      projectId: "wsh-a2a8f",
+      storageBucket: "your_app.appspot.com",
+      messagingSenderId: "1054163847916",
+      appId: "1:1054163847916:android:b1bc71522fbe4bbf7db3c9",
+    ),
+  );
 
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');

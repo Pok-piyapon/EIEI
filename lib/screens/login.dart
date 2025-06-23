@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/notify.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class MunicipalLoginPage extends StatefulWidget {
   @override
@@ -95,7 +97,7 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
         
         // Title
         Text(
-          'เทศบาลเมืองร้อยเอ็ด',
+          'เทศบาล',
           style: TextStyle(
             color: Colors.white,
             fontSize: 24,
@@ -342,11 +344,14 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
     );
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     // Show loading dialog
     
     flashNotify.showNotification();
 
+    // Auth
+    bool success = await signIn(_emailController.text,_passwordController.text);
+    print(success);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -365,10 +370,9 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
       },
     );
 
-    // Simulate login process
-    Future.delayed(Duration(seconds: 2), () {
-      Navigator.of(context).pop(); // Close loading dialog
-      
+        // Show message
+        Navigator.of(context).pop();
+    if (success) {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -376,18 +380,28 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
           backgroundColor: Colors.green,
         ),
       );
-      
-      // Navigate to home page or handle successful login
-    });
+      await Future.delayed(const Duration(seconds: 2));
+      context.go('/');
+      }else{
+        // Show fail message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('อีเมลล์หรือรหัสผ่านไม่ถูกต้อง!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      }
   }
+}
 
-  //void _handleGuestLogin() {
-  //  // Navigate to home page as guest
-  //  ScaffoldMessenger.of(context).showSnackBar(
-  //    SnackBar(
-  //      content: Text('เข้าใช้งานในฐานะผู้เยี่ยมชม'),
-  //      backgroundColor: Color(0xFF8B4A9F),
-  //    ),
-  //  );
-  //}
+Future<bool> signIn(String email, String password) async {
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance
+        .signInWithEmailAndPassword(email: email, password: password);
+    // Sign-in succeeded
+    return true;
+  } on FirebaseAuthException catch (e) {
+    print("❌ Sign in error: ${e.code} - ${e.message}");
+    return false;
+  }
 }

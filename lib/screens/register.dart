@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
-//import '../services/api.dart';
 import "dart:convert";
+
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MunicipalRegisterPage extends StatefulWidget {
   @override
@@ -17,13 +17,11 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _acceptTerms = false;
-
-  // Network
-  var dio = Dio();
 
   @override
   void dispose() {
@@ -140,7 +138,7 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
         SizedBox(height: 16),
         
         Text(
-          'เทศบาลเมืองร้อยเอ็ด',
+          'เทศบาล',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -514,18 +512,7 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
 
   void _handleRegister() async {
     // Show loading dialog
-    Response res = await dio.post("https://piyapon.sinothaitrade.com/signup", data: {
-    "firstname": _firstNameController.text,
-    "lastname": _lastNameController.text,
-    "email": _emailController.text,
-    "password": _passwordController.text,
-  });
-
-  // res.data is usually already a Map<String, dynamic>
-  Map<String, dynamic> jsonData = Map<String, dynamic>.from(res.data);
-
-  String jsonString = jsonEncode(jsonData);
-  print('JSON String: $jsonString');
+    await signUp(_emailController.text,_passwordController.text);
 
     showDialog(
       context: context,
@@ -569,7 +556,6 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // Close success dialog
-                  Navigator.of(context).pop(); // Go back to login page
                 },
                 child: Text(
                   'ตกลง',
@@ -581,5 +567,19 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
         },
       );
     });
+  }
+}
+
+
+
+
+Future<bool> signUp(String email, String password) async {
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance
+        .createUserWithEmailAndPassword(email: email, password: password);
+    return true;
+  } on FirebaseAuthException catch (e) {
+    print("❌ Sign up error: ${e.message}");
+    return false;
   }
 }
