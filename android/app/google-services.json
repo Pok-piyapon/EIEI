@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1054163847916",
-    "project_id": "wsh-a2a8f",
-    "storage_bucket": "wsh-a2a8f.firebasestorage.app"
+    "project_number": "411942764664",
+    "project_id": "wsh-cd933",
+    "storage_bucket": "wsh-cd933.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1054163847916:android:b1bc71522fbe4bbf7db3c9",
+        "mobilesdk_app_id": "1:411942764664:android:1288e6cabd8d930dc6ed8d",
         "android_client_info": {
           "package_name": "com.example.bank_template"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBEz2PWMGa0VZGPxq-S4kIybSqeRgDUssg"
+          "current_key": "AIzaSyBM8BnKubzhnso7eHoQWtdcuem_vPMvhws"
         }
       ],
       "services": {

@@ -29,16 +29,16 @@ final GoRouter _router = GoRouter(
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // firebase
   var firebase = Firebase.initializeApp(
       options: const FirebaseOptions(
-      apiKey: "AIzaSyAjK-9_HF6hRhehoMeFpCz985TZFJ5K7P8",
+      apiKey: "AIzaSyCXwiylwbC0PCHAYqldNSBRn7lsaNtwCtk",
       authDomain: "your_app.firebaseapp.com",
-      projectId: "wsh-a2a8f",
+      projectId: "wsh-cd933",
       storageBucket: "your_app.appspot.com",
-      messagingSenderId: "1054163847916",
-      appId: "1:1054163847916:android:b1bc71522fbe4bbf7db3c9",
+      messagingSenderId: "411942764664",
+      appId: "1:411942764664:android:1288e6cabd8d930dc6ed8d",
     ),
   );
 
