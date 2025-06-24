@@ -28,7 +28,7 @@ class MunicipalHomePage extends StatelessWidget {
               _buildNotificationCard(),
               
               // Action Buttons
-              _buildActionButtons(),
+              _buildActionButtons(context),
               
               // Feature Grid
               Expanded(
@@ -155,7 +155,7 @@ class MunicipalHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: EdgeInsets.symmetric(vertical: 16),
@@ -166,16 +166,20 @@ class MunicipalHomePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildActionButton(Icons.notifications, 'แจ้งเหตุกเหน'),
-          _buildActionButton(Icons.campaign, 'ร้องเรียน'),
-          _buildActionButton(Icons.phone_disabled, 'สายด่วน'),
+          _buildActionButton(context,Icons.notifications, 'แจ้งเหตุกเหน' , '/'),
+          _buildActionButton(context,Icons.campaign, 'ร้องเรียน' , '/complain'),
+          _buildActionButton(context,Icons.phone_disabled, 'สายด่วน' , '/'),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label) {
-    return Column(
+Widget _buildActionButton(BuildContext context , IconData icon, String label, String router) {
+  return GestureDetector(
+    onTap: () {
+      context.go(router);
+    },
+    child: Column(
       children: [
         Container(
           padding: EdgeInsets.all(12),
@@ -195,19 +199,21 @@ class MunicipalHomePage extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildFeatureGrid() {
     final features = [
-      {'icon': Icons.article, 'label': 'ข่าวสาร'},
-      {'icon': Icons.slideshow, 'label': 'บทความ'},
-      {'icon': Icons.videocam, 'label': 'CCTV'},
-      {'icon': Icons.emoji_events, 'label': 'รางวัลที่แดนได้รับ'},
-      {'icon': Icons.play_circle, 'label': 'Youtube'},
-      {'icon': Icons.help_outline, 'label': 'ช่วยเหลือ'},
-      {'icon': Icons.tour, 'label': 'ท่องเที่ยว'},
-      {'icon': Icons.stop_circle, 'label': 'สินค้า OTOP'},
+      {'icon': Icons.article, 'label': 'ข่าวสาร' , 'router': '/'},
+      {'icon': Icons.slideshow, 'label': 'บทความ' , 'router': '/'},
+      {'icon': Icons.videocam, 'label': 'CCTV' , 'router': '/'},
+      {'icon': Icons.emoji_events, 'label': 'รางวัลที่แดนได้รับ' , 'router': '/'},
+      {'icon': Icons.play_circle, 'label': 'Youtube' , 'router': '/'},
+      {'icon': Icons.help_outline, 'label': 'ช่วยเหลือ' , 'router': '/'},
+      {'icon': Icons.tour, 'label': 'ท่องเที่ยว' , 'router': '/'},
+      {'icon': Icons.stop_circle, 'label': 'สินค้า OTOP' , 'router': '/'},
     ];
 
     return Container(
@@ -225,13 +231,14 @@ class MunicipalHomePage extends StatelessWidget {
           return _buildFeatureItem(
             feature['icon'] as IconData,
             feature['label'] as String,
+            feature['router'] as String
           );
         },
       ),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String label) {
+  Widget _buildFeatureItem(IconData icon, String label , String router) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),

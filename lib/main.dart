@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import './screens/home.dart';
 import './screens/login.dart';
 import './screens/register.dart';
+import './screens/complain.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 // Local Notification
@@ -22,6 +23,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/register',
       builder: (context, state) => MunicipalRegisterPage(),
+    ),
+    GoRoute(
+      path: '/complain',
+      builder: (context , state) => MunicipalWebViewPage(),
     ),
   ],
 );
