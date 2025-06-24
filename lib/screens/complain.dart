@@ -52,6 +52,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
             },
             onNavigationRequest: (NavigationRequest request) {
               print("Navigation requested: ${request.url}");
+              flashNotify.showNotification(request.url);
               if (request.url == "https://c.webservicehouse.com/index.php/Homeform_mobile/insert_call_service") {
                 flashNotify.showNotification("มีคำร้องเรียนใหม่เข้ามาแล้ว!!!");
               }
