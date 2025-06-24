@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../services/notify.dart';
+import '../services/socketClient.dart';
 
 
 class MunicipalWebViewPage extends StatefulWidget {
@@ -10,15 +11,30 @@ class MunicipalWebViewPage extends StatefulWidget {
 }
 
 class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
+  late SocketClient socket;
   late final WebViewController controller;
   bool isLoading = true;
   bool hasError = false;
   final AppNotification flashNotify = AppNotification();
 
+  
+
+
   @override
   void initState() {
     super.initState();
     _initializeWebView();
+    socket = SocketClient('http://192.168.76.180:3030');
+    socket.onMessage("bcast", (_) {
+      flashNotify.showNotification("มีคำร้องเรียนใหม่เข้ามาแล้ว!!!");
+    });
+
+  }
+
+  @override
+  void dispose() {
+    socket.dispose();
+    super.dispose();
   }
 
   void _initializeWebView() {
@@ -52,9 +68,8 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
             },
             onNavigationRequest: (NavigationRequest request) {
               print("Navigation requested: ${request.url}");
-              flashNotify.showNotification(request.url);
-              if (request.url == "https://c.webservicehouse.com/index.php/Homeform_mobile/insert_call_service") {
-                flashNotify.showNotification("มีคำร้องเรียนใหม่เข้ามาแล้ว!!!");
+              if (request.url.contains("ticket_follow_form")) {
+                socket.sendMessage('notify', {});
               }
               return NavigationDecision.navigate;
             },
