@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../services/notify.dart';
+
 
 class MunicipalWebViewPage extends StatefulWidget {
   @override
@@ -11,6 +13,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
   late final WebViewController controller;
   bool isLoading = true;
   bool hasError = false;
+  final AppNotification flashNotify = AppNotification();
 
   @override
   void initState() {
@@ -48,7 +51,10 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
               print('WebView error: ${error.description}');
             },
             onNavigationRequest: (NavigationRequest request) {
-              // Allow all navigation requests
+              print("Navigation requested: ${request.url}");
+              if (request.url == "https://c.webservicehouse.com/index.php/Homeform_mobile/insert_call_service") {
+                flashNotify.showNotification("มีคำร้องเรียนใหม่เข้ามาแล้ว!!!");
+              }
               return NavigationDecision.navigate;
             },
           ),
@@ -210,7 +216,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
           IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white, size: 24),
             onPressed: () {
-              Navigator.of(context).pop();
+              context.go('/');
             },
           ),
           Expanded(

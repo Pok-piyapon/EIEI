@@ -17,7 +17,7 @@ class AppNotification {
     await _plugin.initialize(settings);
   }
 
-  Future<void> showNotification() async {
+  Future<void> showNotification([String textBody = "body"]) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'channel_id',
       'channel_name',
@@ -30,8 +30,8 @@ class AppNotification {
 
     await _plugin.show(
       0, // Notification ID
-      'Hello 👋',
-      'This is a local notification.',
+      'แจ้งเตือนเทศบาล',
+      textBody,
       platformDetails,
     );
   }
