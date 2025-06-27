@@ -5,6 +5,7 @@ import './screens/login.dart';
 import './screens/register.dart';
 import './screens/complain.dart';
 import 'package:firebase_core/firebase_core.dart';
+import './services/fcm.dart';
 
 // Local Notification
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -46,6 +47,8 @@ void main() async {
       appId: "1:411942764664:android:1288e6cabd8d930dc6ed8d",
     ),
   );
+
+  await Fcm().initNotifications();
 
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
