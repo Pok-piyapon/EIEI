@@ -73,7 +73,7 @@ class MunicipalHomePage extends StatelessWidget {
             ),
           ),
           IconButton(
-  			icon: Icon(Icons.refresh, color: Colors.white, size: 24),
+  			icon: Icon(Icons.logout, color: Colors.white, size: 24),
   			onPressed: () {
     		// TODO: Your action here
     			context.go("/login");
@@ -166,7 +166,7 @@ class MunicipalHomePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildActionButton(context,Icons.notifications, 'แจ้งเหตุกเหน' , '/'),
+          _buildActionButton(context,Icons.list, 'รายการ' , '/list'),
           _buildActionButton(context,Icons.campaign, 'ร้องเรียน' , '/complain'),
           _buildActionButton(context,Icons.phone_disabled, 'สายด่วน' , '/'),
         ],

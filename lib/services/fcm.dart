@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 
 class Fcm {
   // Create instance of Firebase Messaging
@@ -23,9 +24,11 @@ class Fcm {
   // Function to handle received messages
   void handleMessage(RemoteMessage? message) {
     // check if null; if so, do nothing
+
     if (message == null) return;
 
-    print(message);
+    print(message.notification?.title);
+    print(message.notification?.body);
   }
 
   // Function to initialize background settings
