@@ -1,9 +1,8 @@
+//
 import "package:flutter/material.dart";
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import '../services/notify.dart';
-import '../services/socketClient.dart';
-
+import 'package:dio/dio.dart';
 
 class MunicipalWebViewPage extends StatefulWidget {
   @override
@@ -11,30 +10,15 @@ class MunicipalWebViewPage extends StatefulWidget {
 }
 
 class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
-  late SocketClient socket;
   late final WebViewController controller;
+  final dio = Dio();
   bool isLoading = true;
   bool hasError = false;
-  final AppNotification flashNotify = AppNotification();
-
-  
-
 
   @override
   void initState() {
     super.initState();
     _initializeWebView();
-    socket = SocketClient('http://192.168.76.180:3030');
-    socket.onMessage("bcast", (_) {
-      flashNotify.showNotification("มีคำร้องเรียนใหม่เข้ามาแล้ว!!!");
-    });
-
-  }
-
-  @override
-  void dispose() {
-    socket.dispose();
-    super.dispose();
   }
 
   void _initializeWebView() {
@@ -66,16 +50,33 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
               });
               print('WebView error: ${error.description}');
             },
-            onNavigationRequest: (NavigationRequest request) {
+            onNavigationRequest: (NavigationRequest request) async {
               print("Navigation requested: ${request.url}");
               if (request.url.contains("ticket_follow_form")) {
-                socket.sendMessage('notify', {});
+                final response = await dio.get(
+                  'http://localhost:3000/api/notification',
+                  data: {
+                    "title": "แจ้งเตือน",
+                    "body": "มีการร้องเรียนเข้ามาใหม่",
+                    "data": {
+                      "action": "open_app",
+                      "url": "https://example.com",
+                    },
+                    "imageUrl":
+                        "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
+                  },
+                );
+                print(response.data);
               }
               return NavigationDecision.navigate;
             },
           ),
         )
-        ..loadRequest(Uri.parse('https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt'));
+        ..loadRequest(
+          Uri.parse(
+            'https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt',
+          ),
+        );
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -93,11 +94,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF8B4A9F),
-              Color(0xFFD577A7),
-              Color(0xFFF5C4C4),
-            ],
+            colors: [Color(0xFF8B4A9F), Color(0xFFD577A7), Color(0xFFF5C4C4)],
           ),
         ),
         child: SafeArea(
@@ -105,7 +102,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
             children: [
               // Header with municipal theme
               _buildHeader(context),
-              
+
               // WebView Container
               Expanded(
                 child: Container(
@@ -155,9 +152,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color(0xFF8B4A9F),
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B4A9F)),
             ),
             SizedBox(height: 16),
             Text(
@@ -181,11 +176,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.shade400,
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
             SizedBox(height: 16),
             Text(
               'ไม่สามารถโหลดหน้าเว็บได้',
@@ -198,10 +189,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
             SizedBox(height: 8),
             Text(
               'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.black54, fontSize: 14),
             ),
             SizedBox(height: 24),
             ElevatedButton(

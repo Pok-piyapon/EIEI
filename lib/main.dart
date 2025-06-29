@@ -6,6 +6,9 @@ import './screens/login.dart';
 import './screens/register.dart';
 import './screens/complain.dart';
 import './screens/list.dart';
+import './screens/cctv.dart';
+import './screens/news.dart';
+import './screens/express_call.dart';
 
 
 import 'package:firebase_core/firebase_core.dart';
@@ -38,6 +41,18 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/list',
       builder: (context, state) => ComplaintsListPage(),
+    ),
+    GoRoute(
+      path: '/cctv',
+      builder: (context, state) => MunicipalCCTVPage(),
+    ),
+    GoRoute(
+      path: '/news',
+      builder: (context, state) => MunicipalNewsPage(),
+    ),
+    GoRoute(
+      path: '/express_call',
+      builder: (context, state) => ExpressCallPage(),
     ),
   ],
 );

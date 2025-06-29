@@ -168,7 +168,7 @@ class MunicipalHomePage extends StatelessWidget {
         children: [
           _buildActionButton(context,Icons.list, 'รายการ' , '/list'),
           _buildActionButton(context,Icons.campaign, 'ร้องเรียน' , '/complain'),
-          _buildActionButton(context,Icons.phone_disabled, 'สายด่วน' , '/'),
+          _buildActionButton(context,Icons.phone_disabled, 'สายด่วน' , '/express_call'),
         ],
       ),
     );
@@ -206,9 +206,9 @@ Widget _buildActionButton(BuildContext context , IconData icon, String label, St
 
   Widget _buildFeatureGrid() {
     final features = [
-      {'icon': Icons.article, 'label': 'ข่าวสาร' , 'router': '/'},
+      {'icon': Icons.article, 'label': 'ข่าวสาร' , 'router': '/news'},
       {'icon': Icons.slideshow, 'label': 'บทความ' , 'router': '/'},
-      {'icon': Icons.videocam, 'label': 'CCTV' , 'router': '/'},
+      {'icon': Icons.videocam, 'label': 'CCTV' , 'router': '/cctv'},
       {'icon': Icons.emoji_events, 'label': 'รางวัลที่แดนได้รับ' , 'router': '/'},
       {'icon': Icons.play_circle, 'label': 'Youtube' , 'router': '/'},
       {'icon': Icons.help_outline, 'label': 'ช่วยเหลือ' , 'router': '/'},
@@ -231,15 +231,21 @@ Widget _buildActionButton(BuildContext context , IconData icon, String label, St
           return _buildFeatureItem(
             feature['icon'] as IconData,
             feature['label'] as String,
-            feature['router'] as String
+            feature['router'] as String,
+            context
           );
         },
       ),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String label , String router) {
-    return Container(
+  Widget _buildFeatureItem(IconData icon, String label, String router, BuildContext context) {
+  return InkWell(
+    onTap: () {
+      context.go(router);
+    },
+    borderRadius: BorderRadius.circular(16), // Match Container's radius
+    child: Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(16),
@@ -278,6 +284,8 @@ Widget _buildActionButton(BuildContext context , IconData icon, String label, St
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }
