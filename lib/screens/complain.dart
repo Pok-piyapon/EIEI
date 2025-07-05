@@ -1,7 +1,6 @@
-//
 import "package:flutter/material.dart";
 import 'package:go_router/go_router.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:dio/dio.dart';
 
 class MunicipalWebViewPage extends StatefulWidget {
@@ -10,7 +9,7 @@ class MunicipalWebViewPage extends StatefulWidget {
 }
 
 class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
-  late final WebViewController controller;
+  InAppWebViewController? webViewController;
   final dio = Dio();
   bool isLoading = true;
   bool hasError = false;
@@ -18,72 +17,6 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
   @override
   void initState() {
     super.initState();
-    _initializeWebView();
-  }
-
-  void _initializeWebView() {
-    try {
-      // Initialize the WebView controller
-      controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.white)
-        ..setNavigationDelegate(
-          NavigationDelegate(
-            onProgress: (int progress) {
-              // Update loading progress if needed
-            },
-            onPageStarted: (String url) {
-              setState(() {
-                isLoading = true;
-                hasError = false;
-              });
-            },
-            onPageFinished: (String url) {
-              setState(() {
-                isLoading = false;
-              });
-            },
-            onWebResourceError: (WebResourceError error) {
-              setState(() {
-                isLoading = false;
-                hasError = true;
-              });
-              print('WebView error: ${error.description}');
-            },
-            onNavigationRequest: (NavigationRequest request) async {
-              print("Navigation requested: ${request.url}");
-              if (request.url.contains("ticket_follow_form")) {
-                final response = await dio.get(
-                  'http://localhost:3000/api/notification',
-                  data: {
-                    "title": "แจ้งเตือน",
-                    "body": "มีการร้องเรียนเข้ามาใหม่",
-                    "data": {
-                      "action": "open_app",
-                      "url": "https://example.com",
-                    },
-                    "imageUrl":
-                        "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
-                  },
-                );
-                print(response.data);
-              }
-              return NavigationDecision.navigate;
-            },
-          ),
-        )
-        ..loadRequest(
-          Uri.parse(
-            'https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt',
-          ),
-        );
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        hasError = true;
-      });
-      print('WebView initialization error: $e');
-    }
   }
 
   @override
@@ -138,7 +71,74 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
 
     return Stack(
       children: [
-        WebViewWidget(controller: controller),
+        InAppWebView(
+          initialUrlRequest: URLRequest(
+            url: WebUri('https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt'),
+          ),
+          initialSettings: InAppWebViewSettings(
+            javaScriptEnabled: true,
+            useShouldOverrideUrlLoading: true,
+            mediaPlaybackRequiresUserGesture: false,
+            allowsInlineMediaPlayback: true,
+            iframeAllow: "camera; microphone",
+            iframeAllowFullscreen: true,
+          ),
+          onWebViewCreated: (controller) {
+            webViewController = controller;
+          },
+          onLoadStart: (controller, url) {
+            setState(() {
+              isLoading = true;
+              hasError = false;
+            });
+          },
+          onLoadStop: (controller, url) {
+            setState(() {
+              isLoading = false;
+            });
+          },
+          onReceivedError: (controller, request, error) {
+            setState(() {
+              isLoading = false;
+              hasError = true;
+            });
+            print('WebView error: ${error.description}');
+          },
+          onReceivedHttpError: (controller, request, errorResponse) {
+            setState(() {
+              isLoading = false;
+              hasError = true;
+            });
+            print('HTTP error: ${errorResponse.statusCode}');
+          },
+          shouldOverrideUrlLoading: (controller, navigationAction) async {
+            final url = navigationAction.request.url.toString();
+            print("Navigation requested: $url");
+            
+            if (url.contains("ticket_follow_form")) {
+              try {
+                final response = await dio.post(
+                  'https://cloud-messaging.onrender.com/api/notification',
+                  data: {
+                    "title": "แจ้งเตือน",
+                    "body": "มีการร้องเรียนเข้ามาใหม่",
+                    "data": {
+                      "action": "open_app",
+                      "url": "https://example.com",
+                    },
+                    "imageUrl":
+                        "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
+                  },
+                );
+                print(response.data);
+              } catch (e) {
+                print('Error sending notification: $e');
+              }
+            }
+            
+            return NavigationActionPolicy.ALLOW;
+          },
+        ),
         if (isLoading) _buildLoadingState(),
       ],
     );
@@ -194,7 +194,7 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
             SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                _initializeWebView();
+                _reloadWebView();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF8B4A9F),
@@ -210,6 +210,14 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
         ),
       ),
     );
+  }
+
+  void _reloadWebView() {
+    setState(() {
+      isLoading = true;
+      hasError = false;
+    });
+    webViewController?.reload();
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -254,9 +262,9 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
                 icon: Icon(Icons.refresh, color: Colors.white, size: 24),
                 onPressed: () {
                   if (!hasError) {
-                    controller.reload();
+                    webViewController?.reload();
                   } else {
-                    _initializeWebView();
+                    _reloadWebView();
                   }
                 },
               ),

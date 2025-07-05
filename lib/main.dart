@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:math';
 
 import './screens/home.dart';
 import './screens/login.dart';
@@ -63,7 +64,7 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(
-    name: 'wsh-cd933',
+    name: "wsh-cd933",
     options: const FirebaseOptions(
       apiKey: "AIzaSyCXwiylwbC0PCHAYqldNSBRn7lsaNtwCtk",
       projectId: "wsh-cd933",
@@ -97,4 +98,10 @@ class MyApp extends StatelessWidget {
       routerConfig: _router,
     );
   }
+}
+
+String generateRandomString(int length) {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  final rand = Random.secure();
+  return List.generate(length, (index) => chars[rand.nextInt(chars.length)]).join();
 }
