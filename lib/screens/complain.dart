@@ -1,7 +1,11 @@
 import "package:flutter/material.dart";
 import 'package:go_router/go_router.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:dio/dio.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class MunicipalWebViewPage extends StatefulWidget {
   @override
@@ -9,21 +13,228 @@ class MunicipalWebViewPage extends StatefulWidget {
 }
 
 class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
-  InAppWebViewController? webViewController;
-  final dio = Dio();
-  bool isLoading = true;
-  bool hasError = false;
+  late final WebViewController _controller;
+  final _dio = Dio();
+  final _imagePicker = ImagePicker();
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  static const _url = 'https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt';
+  static const _notificationUrl = 'https://cloud-messaging.onrender.com/api/notification';
+  static const _primaryColor = Color(0xFF8B4A9F);
 
   @override
   void initState() {
     super.initState();
+    _initWebView();
+  }
+
+  void _initWebView() {
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.transparent)
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageStarted: (_) => _setState(isLoading: true, hasError: false),
+        onPageFinished: (_) => _setState(isLoading: false),
+        onWebResourceError: (e) => _setState(isLoading: false, hasError: true),
+        onNavigationRequest: _handleNavigation,
+      ))
+      ..loadRequest(Uri.parse(_url));
+
+    // Configure Android WebView for file uploads
+    if (WebViewPlatform.instance is AndroidWebViewPlatform) {
+      AndroidWebViewController androidController = _controller.platform as AndroidWebViewController;
+      androidController.setMediaPlaybackRequiresUserGesture(false);
+      
+      // Enable file upload functionality
+      androidController.setOnShowFileSelector(_androidFilePicker);
+    }
+  }
+
+  // File picker for Android - Fixed to properly return file paths
+  Future<List<String>> _androidFilePicker(FileSelectorParams params) async {
+    try {
+      // Show options for camera, gallery, or file picker
+      final result = await _showFilePickerDialog();
+      
+      if (result != null && result.isNotEmpty) {
+        // Filter out any null paths and return valid file paths
+        return result.where((path) => path != null && path.isNotEmpty).toList();
+      }
+    } catch (e) {
+      debugPrint('File picker error: $e');
+    }
+    return [];
+  }
+
+  // Show dialog to choose file source - Fixed to properly handle async operations
+  Future<List<String>?> _showFilePickerDialog() async {
+    return showDialog<List<String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('เลือกไฟล์'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('ถ่ายรูป'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await _pickImageFromCamera();
+                  if (result != null) {
+                    // Return the result to the dialog caller
+                    Navigator.pop(context, [result]);
+                  } else {
+                    Navigator.pop(context, <String>[]);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('เลือกจากแกลเลอรี'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await _pickImageFromGallery();
+                  if (result != null) {
+                    Navigator.pop(context, [result]);
+                  } else {
+                    Navigator.pop(context, <String>[]);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder),
+                title: const Text('เลือกไฟล์'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await _pickFile();
+                  if (result != null && result.isNotEmpty) {
+                    Navigator.pop(context, result);
+                  } else {
+                    Navigator.pop(context, <String>[]);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, <String>[]),
+              child: const Text('ยกเลิก'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Pick image from camera
+  Future<String?> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      return image?.path;
+    } catch (e) {
+      debugPrint('Camera picker error: $e');
+      _showErrorSnackBar('ไม่สามารถเปิดกล้องได้: $e');
+      return null;
+    }
+  }
+
+  // Pick image from gallery
+  Future<String?> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      return image?.path;
+    } catch (e) {
+      debugPrint('Gallery picker error: $e');
+      _showErrorSnackBar('ไม่สามารถเลือกรูปภาพได้: $e');
+      return null;
+    }
+  }
+
+  // Pick any file
+  Future<List<String>?> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: true,
+        allowedExtensions: null,
+      );
+
+      if (result != null) {
+        return result.paths.where((path) => path != null).cast<String>().toList();
+      }
+    } catch (e) {
+      debugPrint('File picker error: $e');
+      _showErrorSnackBar('ไม่สามารถเลือกไฟล์ได้: $e');
+    }
+    return null;
+  }
+
+  // Show error message to user
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _setState({bool? isLoading, bool? hasError}) {
+    if (mounted) {
+      setState(() {
+        if (isLoading != null) _isLoading = isLoading;
+        if (hasError != null) _hasError = hasError;
+      });
+    }
+  }
+
+  Future<NavigationDecision> _handleNavigation(NavigationRequest request) async {
+    if (request.url.contains("ticket_follow_form")) {
+      _sendNotification();
+    }
+    return NavigationDecision.navigate;
+  }
+
+  Future<void> _sendNotification() async {
+    try {
+      await _dio.post(_notificationUrl, data: {
+        "title": "แจ้งเตือน",
+        "body": "มีการร้องเรียนเข้ามาใหม่",
+        "data": {"action": "open_app", "url": "https://example.com"},
+        "imageUrl": "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
+      });
+    } catch (e) {
+      debugPrint('Notification error: $e');
+    }
+  }
+
+  void _reload() {
+    _setState(isLoading: true, hasError: false);
+    _controller.reload();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -33,13 +244,10 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header with municipal theme
-              _buildHeader(context),
-
-              // WebView Container
+              _Header(onBack: () => context.go('/'), onReload: _reload),
               Expanded(
                 child: Container(
-                  margin: EdgeInsets.all(16),
+                  margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -47,13 +255,13 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
                         blurRadius: 8,
-                        offset: Offset(0, 4),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: _buildWebViewContent(),
+                    child: _buildContent(),
                   ),
                 ),
               ),
@@ -64,90 +272,86 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
     );
   }
 
-  Widget _buildWebViewContent() {
-    if (hasError) {
-      return _buildErrorState();
-    }
-
+  Widget _buildContent() {
+    if (_hasError) return _ErrorView(onRetry: _reload);
+    
     return Stack(
       children: [
-        InAppWebView(
-          initialUrlRequest: URLRequest(
-            url: WebUri('https://c.webservicehouse.com/Homepage_mobile?KC=FSJ5w2rt'),
-          ),
-          initialSettings: InAppWebViewSettings(
-            javaScriptEnabled: true,
-            useShouldOverrideUrlLoading: true,
-            mediaPlaybackRequiresUserGesture: false,
-            allowsInlineMediaPlayback: true,
-            iframeAllow: "camera; microphone",
-            iframeAllowFullscreen: true,
-          ),
-          onWebViewCreated: (controller) {
-            webViewController = controller;
-          },
-          onLoadStart: (controller, url) {
-            setState(() {
-              isLoading = true;
-              hasError = false;
-            });
-          },
-          onLoadStop: (controller, url) {
-            setState(() {
-              isLoading = false;
-            });
-          },
-          onReceivedError: (controller, request, error) {
-            setState(() {
-              isLoading = false;
-              hasError = true;
-            });
-            print('WebView error: ${error.description}');
-          },
-          onReceivedHttpError: (controller, request, errorResponse) {
-            setState(() {
-              isLoading = false;
-              hasError = true;
-            });
-            print('HTTP error: ${errorResponse.statusCode}');
-          },
-          shouldOverrideUrlLoading: (controller, navigationAction) async {
-            final url = navigationAction.request.url.toString();
-            print("Navigation requested: $url");
-            
-            if (url.contains("ticket_follow_form")) {
-              try {
-                final response = await dio.post(
-                  'https://cloud-messaging.onrender.com/api/notification',
-                  data: {
-                    "title": "แจ้งเตือน",
-                    "body": "มีการร้องเรียนเข้ามาใหม่",
-                    "data": {
-                      "action": "open_app",
-                      "url": "https://example.com",
-                    },
-                    "imageUrl":
-                        "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
-                  },
-                );
-                print(response.data);
-              } catch (e) {
-                print('Error sending notification: $e');
-              }
-            }
-            
-            return NavigationActionPolicy.ALLOW;
-          },
-        ),
-        if (isLoading) _buildLoadingState(),
+        WebViewWidget(controller: _controller),
+        if (_isLoading) const _LoadingView(),
       ],
     );
   }
+}
 
-  Widget _buildLoadingState() {
+class _Header extends StatelessWidget {
+  final VoidCallback onBack;
+  final VoidCallback onReload;
+
+  const _Header({required this.onBack, required this.onReload});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: onBack,
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_city, color: Color(0xFF8B4A9F)),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'เทศบาล',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                onPressed: onReload,
+              ),
+              IconButton(
+                icon: const Icon(Icons.home, color: Colors.white),
+                onPressed: () => context.go("/"),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      child: Center(
+      child: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -168,8 +372,15 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
       ),
     );
   }
+}
 
-  Widget _buildErrorState() {
+class _ErrorView extends StatelessWidget {
+  final VoidCallback onRetry;
+
+  const _ErrorView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
       child: Center(
@@ -177,8 +388,8 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'ไม่สามารถโหลดหน้าเว็บได้',
               style: TextStyle(
                 color: Colors.black87,
@@ -186,97 +397,26 @@ class _MunicipalWebViewPageState extends State<MunicipalWebViewPage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
               style: TextStyle(color: Colors.black54, fontSize: 14),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                _reloadWebView();
-              },
+              onPressed: onRetry,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF8B4A9F),
+                backgroundColor: const Color(0xFF8B4A9F),
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text('ลองใหม่'),
+              child: const Text('ลองใหม่'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _reloadWebView() {
-    setState(() {
-      isLoading = true;
-      hasError = false;
-    });
-    webViewController?.reload();
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: 24),
-            onPressed: () {
-              context.go('/');
-            },
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.location_city, color: Color(0xFF8B4A9F)),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'เทศบาล',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.refresh, color: Colors.white, size: 24),
-                onPressed: () {
-                  if (!hasError) {
-                    webViewController?.reload();
-                  } else {
-                    _reloadWebView();
-                  }
-                },
-              ),
-              IconButton(
-                icon: Icon(Icons.home, color: Colors.white, size: 24),
-                onPressed: () {
-                  context.go("/");
-                },
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import "dart:convert";
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MunicipalRegisterPage extends StatefulWidget {
   @override
@@ -484,7 +483,7 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
           ),
           content: SingleChildScrollView(
             child: Text(
-              'ข้อกำหนดและเงื่อนไขการใช้งานระบบเทศบาลเมืองร้อยเอ็ด\n\n'
+              'ข้อกำหนดและเงื่อนไขการใช้งานระบบเทศบาล\n\n'
               '1. ผู้ใช้งานต้องให้ข้อมูลที่ถูกต้องและครบถ้วน\n'
               '2. ไม่นำข้อมูลส่วนบุคคลไปใช้ในทางที่ผิด\n'
               '3. รักษาความปลอดภัยของบัญชีผู้ใช้\n'
@@ -512,8 +511,6 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
 
   void _handleRegister() async {
     // Show loading dialog
-    await signUp(_emailController.text,_passwordController.text);
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -532,9 +529,67 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
       },
     );
 
-    // Simulate registration process
-    Future.delayed(Duration(seconds: 2), () {
-      Navigator.of(context).pop(); // Close loading dialog
+    try {
+      // Check if email already exists
+      QuerySnapshot existingUser = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: _emailController.text.trim())
+          .limit(1)
+          .get();
+
+      if (existingUser.docs.isNotEmpty) {
+        // Close loading dialog
+        Navigator.of(context).pop();
+        
+        // Show error dialog for existing email
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red, size: 24),
+                  SizedBox(width: 8),
+                  Text('อีเมลซ้ำในระบบ'),
+                ],
+              ),
+              content: Text(
+                'อีเมลนี้ถูกใช้งานแล้ว\nโปรดใช้อีเมลอื่น',
+                textAlign: TextAlign.center,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'ตกลง',
+                    style: TextStyle(color: Color(0xFF8B4A9F)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+
+      // Generate unique ID for user
+      String userId = FirebaseFirestore.instance.collection('users').doc().id;
+      
+      // Create user document in Firestore (password stored as plain text)
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'id': userId,
+        'firstname': _firstNameController.text.trim(),
+        'lastname': _lastNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+        'profile': 'default.jpg',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
       
       // Show success dialog
       showDialog(
@@ -549,13 +604,14 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
               ],
             ),
             content: Text(
-              'ยินดีต้อนรับสู่เทศบาลเมืองร้อยเอ็ด\nโปรดเข้าสู่ระบบเพื่อใช้งาน',
+              'ยินดีต้อนรับสู่เทศบาล\nโปรดเข้าสู่ระบบเพื่อใช้งาน',
               textAlign: TextAlign.center,
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close success dialog
+                  Navigator.of(context).pop();
+                  context.go('/login');
                 },
                 child: Text(
                   'ตกลง',
@@ -566,20 +622,43 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
           );
         },
       );
-    });
-  }
-}
-
-
-
-
-Future<bool> signUp(String email, String password) async {
-  try {
-    UserCredential userCredential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(email: email, password: password);
-    return true;
-  } on FirebaseAuthException catch (e) {
-    print("❌ Sign up error: ${e.message}");
-    return false;
+      
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error, color: Colors.red, size: 24),
+                SizedBox(width: 8),
+                Text('เกิดข้อผิดพลาด'),
+              ],
+            ),
+            content: Text(
+              'ไม่สามารถสมัครสมาชิกได้\nโปรดลองใหม่อีกครั้ง',
+              textAlign: TextAlign.center,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'ตกลง',
+                  style: TextStyle(color: Color(0xFF8B4A9F)),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+      
+      print('Registration error: $e');
+    }
   }
 }

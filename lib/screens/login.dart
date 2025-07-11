@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../services/notify.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import '../services/storage.dart';
 
 class MunicipalLoginPage extends StatefulWidget {
   @override
@@ -15,7 +15,7 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
-  final AppNotification flashNotify = AppNotification();
+  final _store = AuthStorage();
 
   @override
   void dispose() {
@@ -238,6 +238,7 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
                 TextButton(
                   onPressed: () {
                     // Handle forgot password
+                    _handleForgotPassword();
                   },
                   child: Text(
                     'ลืมรหัสผ่าน?',
@@ -346,12 +347,6 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
 
   void _handleLogin() async {
     // Show loading dialog
-    
-    flashNotify.showNotification();
-
-    // Auth
-    bool success = await signIn(_emailController.text,_passwordController.text);
-    print(success);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -370,38 +365,204 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
       },
     );
 
-        // Show message
-        Navigator.of(context).pop();
-    if (success) {
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('เข้าสู่ระบบสำเร็จ'),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      // Authenticate using Firestore only
+      Map<String, dynamic>? userData = await getUserDataFromFirestore(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-      await Future.delayed(const Duration(seconds: 2));
-      context.go('/');
-      }else{
-        // Show fail message
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (userData != null) {
+        // Save user data to local storage
+        await _saveUserDataToLocalStorage(userData);
+        
+        // Set authentication status
+        await AuthStorage.set('auth', 'true');
+        
+        // Save remember me preference
+        if (_rememberMe) {
+          await AuthStorage.set('remember_me', 'true');
+          await AuthStorage.set('saved_email', _emailController.text.trim());
+        }
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เข้าสู่ระบบสำเร็จ'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to home
+        await Future.delayed(const Duration(seconds: 1));
+        context.go('/');
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('อีเมลล์หรือรหัสผ่านไม่ถูกต้อง!'),
+          content: Text('เกิดข้อผิดพลาดในการเข้าสู่ระบบ'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  void _handleForgotPassword() {
+    // Show dialog for password reset
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final TextEditingController emailController = TextEditingController();
+        return AlertDialog(
+          title: Text('ลืมรหัสผ่าน'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน'),
+              SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  labelText: 'อีเมลของคุณ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('ยกเลิก'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Handle password reset request
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('คำขอรีเซ็ตรหัสผ่านถูกส่งแล้ว'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: Text('ส่งคำขอ'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> getUserDataFromFirestore(
+      String email, String password) async {
+    try {
+      // Query Firestore for user with matching email
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        DocumentSnapshot doc = querySnapshot.docs.first;
+        Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
+        
+        // Verify password (assuming plain text comparison)
+        // Note: In production, you should hash passwords
+        if (userData['password'] == password) {
+          // Add document ID to user data
+          userData['documentId'] = doc.id;
+          
+          return userData;
+        }
       }
+      
+      return null;
+    } catch (e) {
+      print('Error fetching user data from Firestore: $e');
+      return null;
+    }
+  }
+
+  Future<void> _saveUserDataToLocalStorage(Map<String, dynamic> userData) async {
+    try {
+      // Save individual user data fields based on your Firestore structure
+      await AuthStorage.set('user_document_id', userData['documentId'] ?? '');
+      await AuthStorage.set('user_id', userData['id'] ?? '');
+      await AuthStorage.set('user_email', userData['email'] ?? '');
+      await AuthStorage.set('user_firstname', userData['firstname'] ?? '');
+      await AuthStorage.set('user_lastname', userData['lastname'] ?? '');
+      await AuthStorage.set('user_profile', userData['profile'] ?? 'default.jpg');
+      await AuthStorage.set('user_created_at', userData['createdAt']?.toString() ?? '');
+      
+      // Save complete user data as JSON string if needed
+      await AuthStorage.set('user_data', jsonEncode(userData));
+      
+      print('✅ User data saved to local storage successfully');
+    } catch (e) {
+      print('❌ Error saving user data to local storage: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  void _loadSavedEmail() async {
+    try {
+      String? rememberMe = await AuthStorage.get('remember_me');
+      String? savedEmail = await AuthStorage.get('saved_email');
+      
+      if (rememberMe == 'true' && savedEmail != null) {
+        setState(() {
+          _emailController.text = savedEmail;
+          _rememberMe = true;
+        });
+      }
+    } catch (e) {
+      print('Error loading saved email: $e');
+    }
   }
 }
 
+// Legacy function for backward compatibility - now uses Firestore only
 Future<bool> signIn(String email, String password) async {
   try {
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
-    // Sign-in succeeded
-    return true;
-  } on FirebaseAuthException catch (e) {
-    print("❌ Sign in error: ${e.code} - ${e.message}");
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .limit(1)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      DocumentSnapshot doc = querySnapshot.docs.first;
+      Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
+      
+      // Verify password
+      if (userData['password'] == password) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (e) {
+    print("❌ Sign in error: $e");
     return false;
   }
 }

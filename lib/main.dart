@@ -10,24 +10,24 @@ import './screens/list.dart';
 import './screens/cctv.dart';
 import './screens/news.dart';
 import './screens/express_call.dart';
-
+import './screens/pin.dart';
+import './screens/profile.dart';
+import './screens/security.dart';
+import './screens/blog.dart';
+import './screens/award.dart';
+import './screens/form.dart';
+import './screens/mailbox.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import './services/fcm.dart';
-
-// Local Notification
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // Global Navigator Key
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-// Local Notification Plugin
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
 // GoRouter Setup
 final GoRouter _router = GoRouter(
-  initialLocation: "/",
+  initialLocation: "/pin",
   routes: [
     GoRoute(path: '/', builder: (context, state) => MunicipalHomePage()),
     GoRoute(path: '/login', builder: (context, state) => MunicipalLoginPage()),
@@ -37,24 +37,24 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/complain',
-      builder: (context, state) => MunicipalWebViewPage(),
+      builder: (context, state) => AppealFormPage(),
     ),
-    GoRoute(
-      path: '/list',
-      builder: (context, state) => ComplaintsListPage(),
-    ),
-    GoRoute(
-      path: '/cctv',
-      builder: (context, state) => MunicipalCCTVPage(),
-    ),
-    GoRoute(
-      path: '/news',
-      builder: (context, state) => MunicipalNewsPage(),
-    ),
+    GoRoute(path: '/list', builder: (context, state) => ComplaintsListPage()),
+    GoRoute(path: '/cctv', builder: (context, state) => MunicipalCCTVPage()),
+    GoRoute(path: '/news', builder: (context, state) => MunicipalNewsPage()),
     GoRoute(
       path: '/express_call',
       builder: (context, state) => ExpressCallPage(),
     ),
+    GoRoute(path: '/pin', builder: (context, state) => MunicipalPinLockPage()),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => MunicipalProfilePage(),
+    ),
+    GoRoute(path: '/security', builder: (context, state) => SecurityPage()),
+    GoRoute(path: '/blog', builder: (context, state) => MunicipalBlogPage()),
+    GoRoute(path: '/award', builder: (context, state) => AwardsShowcasePage()),
+    GoRoute(path: '/mailbox', builder: (context, state)=> MailboxPage()),
   ],
 );
 
@@ -73,17 +73,15 @@ void main() async {
     ),
   );
 
+  // Register background message handler BEFORE initializing FCM
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // Initialize FCM for push notifications
-  await Fcm().initNotifications(); // Uncomment if FCM service is implemented
-
-  // Local Notification Initialization
-  const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initSettings = InitializationSettings(
-    android: androidSettings,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
+  final fcm = Fcm();
+  await fcm.initNotifications();
+  
+  // Sync notifications on app startup
+  await fcm.syncNotificationsOnStartup();
 
   // Run the app after everything is initialized
   runApp(MyApp());
@@ -101,7 +99,11 @@ class MyApp extends StatelessWidget {
 }
 
 String generateRandomString(int length) {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const chars =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   final rand = Random.secure();
-  return List.generate(length, (index) => chars[rand.nextInt(chars.length)]).join();
+  return List.generate(
+    length,
+    (index) => chars[rand.nextInt(chars.length)],
+  ).join();
 }

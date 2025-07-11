@@ -1,4 +1,4 @@
-package com.example.bank_template
+package webservicehouse.app
 
 import io.flutter.embedding.android.FlutterActivity
 

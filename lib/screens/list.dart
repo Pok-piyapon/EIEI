@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../services/api.dart';
 import 'package:dio/dio.dart';
 import '../screens/detail.dart';
+import 'map_screen.dart';
 
 Future<List<Map<String, dynamic>>> Request() async {
   var api = ApiExternal.getDioInstance();
@@ -599,7 +600,7 @@ class _ComplaintsListPageState extends State<ComplaintsListPage>
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // View on map
+                            _openMap(complaint);
                           },
                           icon: Icon(Icons.map, size: 16),
                           label: Text('แผนที่', style: TextStyle(fontSize: 12)),
@@ -708,5 +709,33 @@ class _ComplaintsListPageState extends State<ComplaintsListPage>
     } catch (e) {
       return dateString;
     }
+  }
+
+  void _openMap(Map<String, dynamic> complaint) {
+    // Check if the complaint has valid coordinates
+    final lat = double.tryParse(complaint['ComplaintLat'].toString()) ?? 0.0;
+    final lng = double.tryParse(complaint['ComplaintLong'].toString()) ?? 0.0;
+    
+    if (lat == 0.0 && lng == 0.0) {
+      // Show error message if no coordinates available
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ไม่พบข้อมูลตำแหน่งสำหรับเรื่องร้องเรียนนี้'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    // Navigate to MapScreen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MapScreen(
+          complaint: complaint,
+          allComplaints: allComplaints, // Pass all complaints for "show all" feature
+        ),
+      ),
+    );
   }
 }

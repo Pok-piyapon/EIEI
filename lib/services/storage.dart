@@ -18,6 +18,13 @@ class AuthStorage {
     return await _storage.read(key: _refreshTokenKey);
   }
 
+  static Future<String?> get(String key) async {
+    return await _storage.read(key: key);
+  }
+  static Future<void> set(String key , String value) async {
+    return await _storage.write(key: key , value: value);
+  }
+
   static Future<void> clearTokens() async {
     await _storage.deleteAll();
   }
