@@ -239,10 +239,13 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
                       ),
                     ],
                   ),
-                  child: Icon(
-                    Icons.location_city,
-                    color: Color(0xFF8B4A9F),
-                    size: 24,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/icon/icon.png',
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 SizedBox(width: 12),
@@ -413,7 +416,7 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
                 }),
                 _buildMenuItem(Icons.logout, 'ออกจากระบบ', () {
                   _toggleMenu();
-                  // Handle logout
+                  context.go('/login');
                 }),
               ],
             ),
@@ -428,8 +431,15 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
       leading: Container(
         padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Color(0xFF8B4A9F).withOpacity(0.1),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
         ),
         child: Icon(icon, color: Color(0xFF8B4A9F), size: 20),
       ),
@@ -487,7 +497,7 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(
-                            colors: [Colors.orange.shade300, Colors.orange.shade500],
+                            colors: [Color(0xFF8B4A9F), Color(0xFFD577A7)],
                           ),
                         ),
                         child: Icon(
@@ -521,14 +531,14 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
                                   padding:
                                       EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.shade100,
+                                    color: Color(0xFFD7BBE6),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     newsItems[index]['info']!,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: Colors.blue.shade700,
+                                      color: Color(0xFF8B4A9F),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -583,33 +593,39 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
           ),
         ],
       ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildActionButton(
-              context,
-              Icons.list_alt,
-              'รายการ',
-              '/list',
-              Colors.blue,
-            ),
-            _buildActionButton(
-              context,
-              Icons.campaign,
-              'ร้องเรียน',
-              '/complain',
-              Colors.red,
-            ),
-            _buildActionButton(
-              context,
-              Icons.phone,
-              'สายด่วน',
-              '/express_call',
-              Colors.green,
-            ),
-          ],
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Color(0xFF8B4A9F), width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildActionButton(
+                context,
+                Icons.list_alt,
+                'รายการ',
+                '/list',
+                Color(0xFF8B4A9F),
+              ),
+              _buildActionButton(
+                context,
+                Icons.campaign,
+                'ร้องเรียน',
+                '/complain',
+                Color(0xFF8B4A9F),
+              ),
+              _buildActionButton(
+                context,
+                Icons.phone,
+                'สายด่วน',
+                '/express_call',
+                Color(0xFF8B4A9F),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -631,29 +647,13 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             children: [
-              Container(
-                padding: EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withOpacity(0.8), color],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
+              Icon(icon, color: color, size: 32),
               SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black87,
+                  color: Color(0xFF8B4A9F),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -666,14 +666,14 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
 
   Widget _buildFeatureGrid() {
     final features = [
-      {'icon': Icons.article, 'label': 'ข่าวสาร', 'router': '/news', 'color': Colors.blue},
-      {'icon': Icons.slideshow, 'label': 'บทความ', 'router': '/blog', 'color': Colors.purple},
-      {'icon': Icons.videocam, 'label': 'CCTV', 'router': '/cctv', 'color': Colors.red},
-      {'icon': Icons.emoji_events, 'label': 'รางวัล', 'router': '/award', 'color': Colors.amber},
-      {'icon': Icons.play_circle, 'label': 'Youtube', 'router': '/', 'color': Colors.red},
-      {'icon': Icons.help_outline, 'label': 'ช่วยเหลือ', 'router': '/', 'color': Colors.green},
-      {'icon': Icons.tour, 'label': 'ท่องเที่ยว', 'router': '/', 'color': Colors.orange},
-      {'icon': Icons.store, 'label': 'สินค้า OTOP', 'router': '/', 'color': Colors.teal},
+      {'icon': Icons.article_outlined, 'label': 'ข่าวสาร', 'router': '/news', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.slideshow_outlined, 'label': 'บทความ', 'router': '/blog', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.videocam_outlined, 'label': 'CCTV', 'router': '/cctv', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.emoji_events_outlined, 'label': 'รางวัล', 'router': '/award', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.play_circle_outline, 'label': 'Youtube', 'router': '/', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.help_outline, 'label': 'ช่วยเหลือ', 'router': '/', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.tour_outlined, 'label': 'ท่องเที่ยว', 'router': '/', 'color': Color(0xFF8B4A9F)},
+      {'icon': Icons.store_outlined, 'label': 'สินค้า OTOP', 'router': '/', 'color': Color(0xFF8B4A9F)},
     ];
 
     return Container(
@@ -717,6 +717,7 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Color(0xFF8B4A9F), width: 2),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -728,23 +729,7 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color.withOpacity(0.8), color],
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
+              Icon(icon, color: color, size: 32),
               SizedBox(height: 8),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
@@ -753,7 +738,7 @@ class _MunicipalHomePageState extends State<MunicipalHomePage>
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.black87,
+                    color: Color(0xFF8B4A9F),
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,

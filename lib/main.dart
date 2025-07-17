@@ -5,7 +5,7 @@ import 'dart:math';
 import './screens/home.dart';
 import './screens/login.dart';
 import './screens/register.dart';
-import './screens/complain.dart';
+// import './screens/complain.dart';
 import './screens/list.dart';
 import './screens/cctv.dart';
 import './screens/news.dart';
@@ -22,6 +22,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import './services/fcm.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_line_sdk/flutter_line_sdk.dart';
 
 // Global Navigator Key
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -35,10 +36,7 @@ final GoRouter _router = GoRouter(
       path: '/register',
       builder: (context, state) => MunicipalRegisterPage(),
     ),
-    GoRoute(
-      path: '/complain',
-      builder: (context, state) => AppealFormPage(),
-    ),
+    GoRoute(path: '/complain', builder: (context, state) => AppealFormPage()),
     GoRoute(path: '/list', builder: (context, state) => ComplaintsListPage()),
     GoRoute(path: '/cctv', builder: (context, state) => MunicipalCCTVPage()),
     GoRoute(path: '/news', builder: (context, state) => MunicipalNewsPage()),
@@ -54,7 +52,7 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/security', builder: (context, state) => SecurityPage()),
     GoRoute(path: '/blog', builder: (context, state) => MunicipalBlogPage()),
     GoRoute(path: '/award', builder: (context, state) => AwardsShowcasePage()),
-    GoRoute(path: '/mailbox', builder: (context, state)=> MailboxPage()),
+    GoRoute(path: '/mailbox', builder: (context, state) => MailboxPage()),
   ],
 );
 
@@ -79,9 +77,20 @@ void main() async {
   // Initialize FCM for push notifications
   final fcm = Fcm();
   await fcm.initNotifications();
-  
+
   // Sync notifications on app startup
   await fcm.syncNotificationsOnStartup();
+
+  // Initialize Line SDK (usually called once in main)
+
+  LineSDK.instance
+      .setup("2007767225")
+      .then((_) {
+        print("LineSDK is Prepared");
+      })
+      .catchError((error) {
+        print("LineSDK initialization failed: $error");
+      });
 
   // Run the app after everything is initialized
   runApp(MyApp());

@@ -52,7 +52,7 @@ class _MunicipalPinLockPageState extends State<MunicipalPinLockPage> {
         child: SafeArea(
           child: Column(
             children: [
-              SizedBox(height: 80),
+              SizedBox(height: 20),
 
               // Header
               _buildHeader(),
@@ -82,8 +82,8 @@ class _MunicipalPinLockPageState extends State<MunicipalPinLockPage> {
       children: [
         // Logo
         Container(
-          width: 120,
-          height: 120,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
             color: Colors.white,
             shape: BoxShape.circle,
@@ -95,10 +95,17 @@ class _MunicipalPinLockPageState extends State<MunicipalPinLockPage> {
               ),
             ],
           ),
-          child: Icon(Icons.location_city, color: Color(0xFF8B4A9F), size: 60),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/icon/icon.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
 
-        SizedBox(height: 30),
+        SizedBox(height: 20),
 
         // Title
         Text(

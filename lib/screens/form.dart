@@ -3,52 +3,36 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
 import 'dart:async';
-import 'dart:math' as math;
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 
 class AppealFormPage extends StatefulWidget {
   @override
   _AppealFormPageState createState() => _AppealFormPageState();
 }
 
-class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStateMixin {
+class _AppealFormPageState extends State<AppealFormPage> {
   int _currentStep = 0;
   final PageController _pageController = PageController();
   final ImagePicker _imagePicker = ImagePicker();
-  
-  // Animation controllers
-  late AnimationController _headerAnimationController;
-  late AnimationController _cardAnimationController;
-  late AnimationController _progressAnimationController;
-  late AnimationController _floatingActionController;
-  
-  // Animations
-  late Animation<double> _headerSlideAnimation;
-  late Animation<double> _cardFadeAnimation;
-  late Animation<double> _progressAnimation;
-  late Animation<double> _floatingPulseAnimation;
-  
-  bool _isSubmitting = false;
-  bool _showSuccessAnimation = false;
   
   // Form controllers
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _appealTypeController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
-  final TextEditingController _locationController = TextEditingController();
   
   List<File> _selectedImages = [];
-  String _selectedAppealType = 'เลือกประเภทการอุทธรณ์';
+  String _selectedAppealType = 'เลือกประเภทการร้องเรียน';
   String _selectedLocation = 'เลือกตำแหน่ง';
+  String _selectedTitlePrefix = 'เลือกคำนำหน้า';
   
   // Location variables
   double? _latitude;
@@ -57,6 +41,13 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
   bool _isLoadingLocation = false;
   final TextEditingController _latController = TextEditingController();
   final TextEditingController _longController = TextEditingController();
+  
+  // Form submission state
+  bool _isSubmitting = false;
+  
+  // Access token state
+  String? _accessToken;
+  bool _isLoadingToken = false;
   
   // Zip code functionality
   final Dio _dio = Dio();
@@ -67,85 +58,137 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
   // Notification URL
   final String _notificationUrl = 'https://cloud-messaging.onrender.com/api/notification';
   
-  final List<String> _appealTypes = [
-    'เลือกประเภทการอุทธรณ์',
-    'อุทธรณ์ภาษี',
-    'อุทธรณ์ใบอนุญาต',
-    'อุทธรณ์การปรับ',
-    'อุทธรณ์การบริการ',
-    'อื่นๆ'
-  ];
+  List<ComplaintType> _complaintTypes = [];
+  String _selectedComplaintTypeId = '';
+
+  Future<void> _loadComplaintTypes() async {
+    try {
+      final String response = await rootBundle.loadString('assets/data/complaint_type.json');
+      final List<dynamic> data = json.decode(response);
+      setState(() {
+        _complaintTypes = data.map((item) => ComplaintType.fromJson(item)).toList();
+      });
+    } catch (e) {
+      print('Error loading complaint types: $e');
+    }
+  }
+
+  List<String> get _appealTypes {
+    List<String> types = ['เลือกประเภทการร้องเรียน'];
+    types.addAll(_complaintTypes.map((type) => type.name).toList());
+    return types;
+  }
 
   @override
   void initState() {
     super.initState();
-    _setupAnimations();
-    _startInitialAnimations();
+    _loadComplaintTypes();
+    _getAccessToken();
   }
-
-  void _setupAnimations() {
-    // Header animation
-    _headerAnimationController = AnimationController(
-      duration: Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _headerSlideAnimation = Tween<double>(
-      begin: -100.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _headerAnimationController,
-      curve: Curves.elasticOut,
-    ));
-
-    // Card animation
-    _cardAnimationController = AnimationController(
-      duration: Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _cardFadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _cardAnimationController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    // Progress animation
-    _progressAnimationController = AnimationController(
-      duration: Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _progressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _progressAnimationController,
-      curve: Curves.easeInOutCubic,
-    ));
-
-    // Floating action animation
-    _floatingActionController = AnimationController(
-      duration: Duration(milliseconds: 2000),
-      vsync: this,
-    )..repeat(reverse: true);
-    _floatingPulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(
-      parent: _floatingActionController,
-      curve: Curves.easeInOut,
-    ));
+  
+  Future<void> _testApiCall() async {
+    if (_accessToken == null) {
+      print('No access token available for testing');
+      return;
+    }
+    
+    try {
+      print('Testing API call with minimal data');
+      final testData = {
+        'pname': '1',
+        'fname': 'Test',
+        'lname': 'User',
+        'tel': '0123456789',
+        'address': 'Test Address',
+        'soi': '',
+        'latitude': '',
+        'longitude': '',
+        'complaint_type_id': '1',
+        'complaint_note': 'Test complaint',
+        'image_1': '',
+        'image_2': '',
+        'image_3': '',
+      };
+      
+      final response = await _dio.post(
+        'https://help.webservicehouse.com/ApiService/insert_call_service_public',
+        data: testData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $_accessToken',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        ),
+      );
+      
+      print('Test API response: ${response.data}');
+    } catch (e) {
+      print('Test API error: $e');
+      if (e is DioException && e.response != null) {
+        print('Test API error response: ${e.response!.data}');
+      }
+    }
   }
-
-  void _startInitialAnimations() {
-    _headerAnimationController.forward();
-    Future.delayed(Duration(milliseconds: 200), () {
-      _cardAnimationController.forward();
+  
+  String _getBase64Image(int index) {
+    try {
+      if (_selectedImages.length > index) {
+        final imageBytes = _selectedImages[index].readAsBytesSync();
+        final base64String = base64Encode(imageBytes);
+        return "data:image/jpeg;base64,$base64String";
+      }
+      return "";
+    } catch (e) {
+      print('Error encoding image $index: $e');
+      return "";
+    }
+  }
+  
+  Future<void> _getAccessToken() async {
+    setState(() {
+      _isLoadingToken = true;
     });
-    Future.delayed(Duration(milliseconds: 400), () {
-      _progressAnimationController.forward();
-    });
+    
+    try {
+      print('Fetching access token from: https://help.webservicehouse.com/ApiService/public_token');
+      final tokenResponse = await _dio.post(
+        'https://help.webservicehouse.com/ApiService/public_token',
+        data: {'api_key': 'MyKey2025'},
+        options: Options(
+          contentType: 'application/x-www-form-urlencoded',
+        ),
+      );
+      
+      print('Token response status: ${tokenResponse.statusCode}');
+      print('Token response data: ${tokenResponse.data}');
+      print(tokenResponse.data["access_token"]);
+      if (tokenResponse.statusCode == 200 && tokenResponse.data['access_token'] != null) {
+        setState(() {
+          _accessToken = tokenResponse.data['access_token'];
+          _isLoadingToken = false;
+        });
+        print('Access token fetched successfully: ${_accessToken!.substring(0, 20)}...');
+        print('Full token: $_accessToken');
+        
+        // Test the API call with minimal data
+        //await _testApiCall();
+      } else {
+        throw Exception('Failed to get access token');
+      }
+    } catch (e) {
+      print('Error getting access token: $e');
+      setState(() {
+        _isLoadingToken = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to initialize form. Please refresh the page.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+
 
   Future<void> _searchZipCode(String query) async {
     if (query.length < 3) {
@@ -203,13 +246,13 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
     });
   }
   
-  Future<void> _sendNotification() async {
+Future<void> _sendNotification(String imageUrl , String note) async {
     try {
       await _dio.post(_notificationUrl, data: {
         "title": "แจ้งเตือน",
-        "body": "มีการร้องเรียนเข้ามาใหม่",
+        "body": note,
         "data": {"action": "open_app", "url": "https://example.com"},
-        "imageUrl": "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D",
+        "imageUrl": imageUrl,
       });
     } catch (e) {
       debugPrint('Notification error: $e');
@@ -222,22 +265,14 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
     _lastNameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
-    _appealTypeController.dispose();
     _contentController.dispose();
     _streetController.dispose();
-    _locationController.dispose();
     _latController.dispose();
     _longController.dispose();
     _pageController.dispose();
     
     // Cancel zip code timer
     _zipCodeDebounceTimer?.cancel();
-    
-    // Dispose animation controllers
-    _headerAnimationController.dispose();
-    _cardAnimationController.dispose();
-    _progressAnimationController.dispose();
-    _floatingActionController.dispose();
     
     super.dispose();
   }
@@ -303,7 +338,7 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
           ),
           SizedBox(width: 12),
           Text(
-            'แบบฟอร์มอุทธรณ์',
+            'แบบฟอร์มร้องเรียน',
             style: TextStyle(
               color: Colors.white,
               fontSize: 24,
@@ -435,6 +470,18 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
             _buildStepTitle('ข้อมูลส่วนบุคคล', 'กรอกข้อมูลส่วนตัวของท่าน'),
             SizedBox(height: 24),
             _buildFormCard([
+              _buildDropdownField(
+                value: _selectedTitlePrefix,
+                items: ['เลือกคำนำหน้า', 'นาย', 'นาง', 'นางสาว'],
+                label: 'คำนำหน้า',
+                icon: Icons.person,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTitlePrefix = value!;
+                  });
+                },
+              ),
+              SizedBox(height: 16),
               _buildTextField(
                 controller: _firstNameController,
                 label: 'ชื่อ',
@@ -472,26 +519,36 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStepTitle('รายละเอียดการอุทธรณ์', 'กรอกข้อมูลเกี่ยวกับการอุทธรณ์'),
+            _buildStepTitle('รายละเอียดการร้องเรียน', 'กรอกข้อมูลเกี่ยวกับการร้องเรียน'),
             SizedBox(height: 24),
             _buildFormCard([
               _buildDropdownField(
                 value: _selectedAppealType,
                 items: _appealTypes,
-                label: 'ประเภทการอุทธรณ์',
+                label: 'ประเภทการร้องเรียน',
                 icon: Icons.category,
                 onChanged: (value) {
                   setState(() {
                     _selectedAppealType = value!;
+                    // หาค่า ID ของประเภทการร้องเรียนที่เลือก
+                    if (value != 'เลือกประเภทการร้องเรียน') {
+                      final selectedType = _complaintTypes.firstWhere(
+                        (type) => type.name == value,
+                        orElse: () => ComplaintType(id: 0, name: ''),
+                      );
+                      _selectedComplaintTypeId = selectedType.id.toString();
+                    } else {
+                      _selectedComplaintTypeId = '';
+                    }
                   });
                 },
               ),
               SizedBox(height: 16),
               _buildTextField(
                 controller: _contentController,
-                label: 'เนื้อหาการอุทธรณ์',
+                label: 'เนื้อหาการร้องเรียน',
                 icon: Icons.description,
-                hint: 'อธิบายรายละเอียดการอุทธรณ์',
+                hint: 'อธิบายรายละเอียดการร้องเรียน',
                 maxLines: 5,
               ),
               SizedBox(height: 16),
@@ -503,8 +560,6 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
               ),
               SizedBox(height: 16),
               _buildLocationField(),
-              SizedBox(height: 16),
-              _buildCoordinatesDisplay(),
             ]),
           ],
         ),
@@ -519,7 +574,7 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStepTitle('อัพโหลดรูปภาพ', 'เพิ่มรูปภาพประกอบการอุทธรณ์ (สูงสุด 3 รูป)'),
+            _buildStepTitle('อัพโหลดรูปภาพ', 'เพิ่มรูปภาพประกอบการร้องเรียน (สูงสุด 3 รูป)'),
             SizedBox(height: 24),
             _buildFormCard([
               _buildImageUploadSection(),
@@ -1119,90 +1174,6 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
     );
   }
   
-  Widget _buildCoordinatesDisplay() {
-    Color accentColor = [
-      Color(0xFF6A5AE0), // Purple
-      Color(0xFF42A5F5), // Blue
-      Color(0xFF26C6DA), // Cyan
-      Color(0xFF66BB6A), // Green
-    ][_currentStep];
-    
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accentColor.withOpacity(0.05),
-            accentColor.withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.edit_location, color: accentColor),
-              SizedBox(width: 8),
-              Text(
-                'แก้ไขพิกัดแม่นยำ',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: accentColor,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  controller: _latController,
-                  label: 'Latitude',
-                  icon: Icons.place,
-                  hint: 'เช่น 13.7563',
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  controller: _longController,
-                  label: 'Longitude',
-                  icon: Icons.place,
-                  hint: 'เช่น 100.5018',
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _setManualLocation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: Icon(Icons.save_alt),
-              label: Text('บันทึกพิกัด'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildImageUploadSection() {
     return Column(
@@ -1335,13 +1306,15 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
   Widget _buildConfirmationCard() {
     return _buildFormCard([
       _buildConfirmationSection('ข้อมูลส่วนบุคคล', [
+        _buildConfirmationItem('คำนำหน้า', _selectedTitlePrefix),
         _buildConfirmationItem('ชื่อ-นามสกุล', '${_firstNameController.text} ${_lastNameController.text}'),
         _buildConfirmationItem('เบอร์โทรศัพท์', _phoneController.text),
         _buildConfirmationItem('ที่อยู่', _addressController.text),
       ]),
       Divider(height: 32),
-      _buildConfirmationSection('รายละเอียดการอุทธรณ์', [
+      _buildConfirmationSection('รายละเอียดการร้องเรียน', [
         _buildConfirmationItem('ประเภท', _selectedAppealType),
+        _buildConfirmationItem('รหัสประเภท', _selectedComplaintTypeId.isNotEmpty ? _selectedComplaintTypeId : '-'),
         _buildConfirmationItem('เนื้อหา', _contentController.text),
         _buildConfirmationItem('ถนน/ซอย', _streetController.text),
         _buildConfirmationItem('ตำแหน่ง', _selectedLocation),
@@ -1431,7 +1404,7 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
           Expanded(
             flex: _currentStep == 0 ? 1 : 1,
             child: ElevatedButton(
-              onPressed: _currentStep == 3 ? _submitForm : _nextStep,
+              onPressed: (_isSubmitting || _isLoadingToken) ? null : (_currentStep == 3 ? () => _submitForm() : _nextStep),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Color(0xFF8B4A9F),
@@ -1441,13 +1414,22 @@ class _AppealFormPageState extends State<AppealFormPage> with TickerProviderStat
                 ),
                 elevation: 8,
               ),
-              child: Text(
-                _currentStep == 3 ? 'ส่งข้อมูล' : 'ถัดไป',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              child: _isSubmitting || _isLoadingToken ? 
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B4A9F)),
+                  ),
+                ) : 
+                Text(
+                  _currentStep == 3 ? 'ส่งข้อมูล' : 'ถัดไป',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
             ),
           ),
         ],
@@ -1823,12 +1805,17 @@ Future<void> _showLocationPicker() async {
     }
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+    
     // Validate form
-    if (_firstNameController.text.isEmpty ||
+    if (_selectedTitlePrefix == 'เลือกคำนำหน้า' ||
+        _firstNameController.text.isEmpty ||
         _lastNameController.text.isEmpty ||
         _phoneController.text.isEmpty ||
-        _selectedAppealType == 'เลือกประเภทการอุทธรณ์' ||
+        _selectedAppealType == 'เลือกประเภทการร้องเรียน' ||
         _contentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1836,11 +1823,104 @@ Future<void> _showLocationPicker() async {
           backgroundColor: Colors.red,
         ),
       );
+      setState(() {
+        _isSubmitting = false;
+      });
       return;
     }
 
-    // Send notification
-    _sendNotification();
+    try {
+      // Ensure access token is fetched
+      if (_accessToken == null) {
+        if (_isLoadingToken) {
+          throw Exception('Please wait for the form to initialize...');
+        } else {
+          throw Exception('Access token is not available. Please refresh the page.');
+        }
+      }
+      
+      print('Access token used for submission: ${_accessToken!.substring(0, 20)}...');
+
+      // Prepare form data as a map for FormData - start with basic fields only
+      final formDataMap = {
+        "pname": _selectedTitlePrefix == 'นาย' ? '1' : _selectedTitlePrefix == 'นาง' ? '2' : '3',
+        "fname": _firstNameController.text ?? "",
+        "lname": _lastNameController.text ?? "",
+        "tel": _phoneController.text ?? "",
+        "address": _addressController.text ?? "",
+        "soi": _streetController.text ?? "",
+        "latitude": _latitude?.toString() ?? "",
+        "longitude": _longitude?.toString() ?? "",
+        "complaint_type_id": _selectedComplaintTypeId ?? "",
+        "complaint_note": _contentController.text ?? "",
+        "image_1": _getBase64Image(0),
+        "image_2": _getBase64Image(1),
+        "image_3": _getBase64Image(2),
+      };
+      
+      print('Form data map: $formDataMap');
+      print('Images count: ${_selectedImages.length}');
+      
+      print('Submitting form data with ${formDataMap.keys.length} fields');
+
+      // Try manual URL encoding
+      final encodedData = formDataMap.entries
+          .map((entry) => '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value.toString())}')
+          .join('&');
+      
+      print('Authorization header: Bearer $_accessToken');
+      print('Request URL: https://help.webservicehouse.com/ApiService/insert_call_service_public');
+      print('Encoded data length: ${encodedData.length}');
+
+      final response = await _dio.post(
+        'https://help.webservicehouse.com/ApiService/insert_call_service_public',
+        data: encodedData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $_accessToken',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        ),
+      );
+
+      if (response.data['status'] == "success") {
+        // Update notification with image URLs
+        final imageUrls = List<String>.from(response.data['image_urls']);
+        final firstImageUrl = imageUrls.isNotEmpty ? imageUrls.first : "https://images.unsplash.com/photo-1575936123452-b67c3203c357?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aW1hZ2V8ZW58MHx8MHx8fDA%3D";
+        await _sendNotification(firstImageUrl,_contentController.text ?? "");
+      } else {
+        throw Exception('Form submission failed');
+      }
+
+    } catch (e) {
+      print('Error submitting form: $e');
+      String errorMessage = 'Failed to submit form. Please try again.';
+      
+      if (e is DioException) {
+        if (e.response?.statusCode == 403) {
+          errorMessage = 'Access denied. Please check your credentials.';
+          print('403 Error Response: ${e.response?.data}');
+        } else if (e.response?.statusCode == 401) {
+          errorMessage = 'Authentication failed. Please try again.';
+        } else if (e.response != null) {
+          errorMessage = 'Server error (${e.response?.statusCode}). Please try again.';
+          print('Server response: ${e.response?.data}');
+        }
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    // Reset loading state
+    setState(() {
+      _isSubmitting = false;
+    });
 
     // Show success dialog
     showDialog(
@@ -1854,7 +1934,7 @@ Future<void> _showLocationPicker() async {
             Text('ส่งข้อมูลสำเร็จ'),
           ],
         ),
-        content: Text('ข้อมูลการอุทธรณ์ของท่านได้รับการบันทึกแล้ว\nทางเราจะติดต่อกลับภายใน 3-5 วันทำการ'),
+        content: Text('ข้อมูลการร้องเรียนของท่านได้รับการบันทึกแล้ว\nทางเราจะติดต่อกลับภายใน 3-5 วันทำการ'),
         actions: [
           TextButton(
             onPressed: () {
@@ -1872,6 +1952,31 @@ Future<void> _showLocationPicker() async {
         ],
       ),
     );
+  }
+}
+
+// Complaint Type data model
+class ComplaintType {
+  final int id;
+  final String name;
+
+  ComplaintType({
+    required this.id,
+    required this.name,
+  });
+
+  factory ComplaintType.fromJson(Map<String, dynamic> json) {
+    return ComplaintType(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
   }
 }
 

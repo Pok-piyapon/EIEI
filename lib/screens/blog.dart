@@ -26,6 +26,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Web Development', 'Programming', 'Technology'],
       summary: 'บทความเกี่ยวกับเทคนิคการพัฒนาเว็บแอปพลิเคชันสมัยใหม่',
       status: 'เผยแพร่แล้ว',
+      imageUrl: 'https://picsum.photos/1920/1080?random=1',
     ),
     BlogPost(
       id: '002',
@@ -40,6 +41,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Database', 'SQL', 'Performance'],
       summary: 'คู่มือการปรับปรุงประสิทธิภาพฐานข้อมูล',
       status: 'เผยแพร่แล้ว',
+      imageUrl: 'https://picsum.photos/1920/1080?random=2',
     ),
     BlogPost(
       id: '003',
@@ -54,6 +56,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Design', 'UI', 'UX', 'Trends'],
       summary: 'แนวโน้มการออกแบบ UI/UX ที่น่าสนใจในปี 2025',
       status: 'เผยแพร่แล้ว',
+      imageUrl: 'https://picsum.photos/1920/1080?random=3',
     ),
     BlogPost(
       id: '004',
@@ -68,6 +71,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Machine Learning', 'AI', 'Data Science'],
       summary: 'บทความแนะนำการเรียนรู้ Machine Learning สำหรับผู้เริ่มต้น',
       status: 'ร่าง',
+      imageUrl: 'https://picsum.photos/1920/1080?random=4',
     ),
     BlogPost(
       id: '005',
@@ -82,6 +86,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Flutter', 'Mobile', 'Development'],
       summary: 'การพัฒนาแอปพลิเคชันมือถือด้วย Flutter',
       status: 'เผยแพร่แล้ว',
+      imageUrl: 'https://picsum.photos/1920/1080?random=5',
     ),
     BlogPost(
       id: '006',
@@ -96,6 +101,7 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       tags: ['Cloud', 'AWS', 'Azure', 'Infrastructure'],
       summary: 'ภาพรวมของ Cloud Computing และการใช้งานจริง',
       status: 'รอตรวจสอบ',
+      imageUrl: 'https://picsum.photos/1920/1080?random=6',
     ),
   ];
 
@@ -442,29 +448,67 @@ class _MunicipalBlogPageState extends State<MunicipalBlogPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Blog Header with gradient background
+          // Blog Header with image
           Container(
-            height: 120,
+            height: 180,
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF8B4A9F).withOpacity(0.8),
-                  Color(0xFFD577A7).withOpacity(0.8),
-                ],
-              ),
             ),
             child: Stack(
               children: [
-                Center(
-                  child: Icon(
-                    Icons.article,
-                    size: 48,
-                    color: Colors.white.withOpacity(0.7),
+                // Background Image
+                ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  child: Image.network(
+                    blog.imageUrl,
+                    width: double.infinity,
+                    height: 180,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF8B4A9F).withOpacity(0.8),
+                              Color(0xFFD577A7).withOpacity(0.8),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.article,
+                            size: 48,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // Overlay gradient
+                Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.6),
+                      ],
+                    ),
                   ),
                 ),
                 // ID Badge
@@ -889,6 +933,7 @@ class BlogPost {
   final List<String> tags;
   final String summary;
   final String status;
+  final String imageUrl;
 
   BlogPost({
     required this.id,
@@ -903,5 +948,6 @@ class BlogPost {
     required this.tags,
     required this.summary,
     required this.status,
+    required this.imageUrl,
   });
 }

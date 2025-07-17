@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import '../services/storage.dart';
+import '../oauth/line.dart';
 
 class MunicipalLoginPage extends StatefulWidget {
   @override
@@ -86,10 +87,13 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
               ),
             ],
           ),
-          child: Icon(
-            Icons.location_city,
-            color: Color(0xFF8B4A9F),
-            size: 50,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/icon/icon.png',
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
         
@@ -310,6 +314,10 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
         ),
         
         SizedBox(height: 20),
+        
+        // Line Login Button
+        _buildLineLoginButton(),
+        
         SizedBox(height: 16),
         
         // Register Link
@@ -342,6 +350,247 @@ class _MunicipalLoginPageState extends State<MunicipalLoginPage> {
         
         SizedBox(height: 20),
       ],
+    );
+  }
+
+  void _handleLineLogin() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C300)),
+              ),
+              SizedBox(width: 20),
+              Text('กำลังเข้าสู่ระบบด้วย LINE...'),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      final result = await LineAuthService.login();
+      
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      if (result != null && result.userProfile != null) {
+        // Show user profile in alert box
+        _showLineProfileDialog(result.userProfile!);
+        
+        // Set authentication status
+        await AuthStorage.set('auth', 'true');
+        await AuthStorage.set('line_user_id', result.userProfile!.userId);
+        await AuthStorage.set('line_display_name', result.userProfile!.displayName ?? '');
+        await AuthStorage.set('line_picture_url', result.userProfile!.pictureUrl ?? '');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('LINE เข้าสู่ระบบล้มเหลว กรุณาลองอีกครั้ง'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการเข้าสู่ระบบ LINE'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print('LINE Login Error: $e');
+    }
+  }
+
+  void _showLineProfileDialog(dynamic userProfile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Color(0xFF00C300),
+                size: 28,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'เข้าสู่ระบบสำเร็จ',
+                style: TextStyle(
+                  color: Color(0xFF00C300),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profile Picture
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.grey[300],
+                ),
+                child: userProfile.pictureUrl != null && userProfile.pictureUrl!.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          userProfile.pictureUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.grey[600],
+                            );
+                          },
+                        ),
+                      )
+                    : Icon(
+                        Icons.person,
+                        size: 40,
+                        color: Colors.grey[600],
+                      ),
+              ),
+              
+              SizedBox(height: 16),
+              
+              // Display Name
+              Text(
+                'ยินดีต้อนรับ',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                userProfile.displayName ?? 'LINE User',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              SizedBox(height: 16),
+              
+              // User ID (optional)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'User ID: ${userProfile.userId}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              
+              SizedBox(height: 20),
+              
+              // Status message
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF00C300).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFF00C300).withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      color: Color(0xFF00C300),
+                      size: 16,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'เข้าสู่ระบบด้วย LINE สำเร็จแล้ว',
+                        style: TextStyle(
+                          color: Color(0xFF00C300),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'ตกลง',
+                style: TextStyle(
+                  color: Color(0xFF00C300),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLineLoginButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _handleLineLogin,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Color(0xFF00C300), // LINE's official green color
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 3,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.chat,
+              size: 20,
+            ),
+            SizedBox(width: 12),
+            Text(
+              'เข้าสู่ระบบด้วย LINE',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

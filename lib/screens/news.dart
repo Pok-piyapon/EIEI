@@ -20,7 +20,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'กิจกรรม',
       date: '29 มิ.ย. 2025',
       author: 'ฝ่ายประชาสัมพันธ์',
-      imageUrl: 'assets/images/news1.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=1',
       readTime: '3 นาที',
       isImportant: true,
       views: 1250,
@@ -32,7 +32,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'ประกาศ',
       date: '28 มิ.ย. 2025',
       author: 'กองช่าง',
-      imageUrl: 'assets/images/news2.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=2',
       readTime: '2 นาที',
       isImportant: true,
       views: 890,
@@ -44,7 +44,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'สิ่งแวดล้อม',
       date: '27 มิ.ย. 2025',
       author: 'กองสาธารณสุข',
-      imageUrl: 'assets/images/news3.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=3',
       readTime: '4 นาที',
       isImportant: false,
       views: 654,
@@ -56,7 +56,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'กิจกรรม',
       date: '26 มิ.ย. 2025',
       author: 'กองการศึกษา',
-      imageUrl: 'assets/images/news4.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=4',
       readTime: '5 นาที',
       isImportant: false,
       views: 432,
@@ -68,7 +68,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'ประกาศ',
       date: '25 มิ.ย. 2025',
       author: 'กองสาธารณูปโภค',
-      imageUrl: 'assets/images/news5.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=5',
       readTime: '2 นาที',
       isImportant: false,
       views: 1100,
@@ -80,7 +80,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       category: 'ประชุม',
       date: '24 มิ.ย. 2025',
       author: 'สำนักปลัด',
-      imageUrl: 'assets/images/news6.jpg',
+      imageUrl: 'https://picsum.photos/1920/1080?random=6',
       readTime: '6 นาที',
       isImportant: false,
       views: 780,
@@ -424,7 +424,7 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // News Image Placeholder
+          // News Image from URL
           Container(
             height: 200,
             width: double.infinity,
@@ -433,20 +433,58 @@ class _MunicipalNewsPageState extends State<MunicipalNewsPage> {
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
               ),
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF8B4A9F).withOpacity(0.8),
-                  Color(0xFFD577A7).withOpacity(0.8),
-                ],
-              ),
             ),
             child: Stack(
               children: [
-                Center(
-                  child: Icon(
-                    Icons.image,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.7),
+                // Background Image
+                ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  child: Image.network(
+                    news.imageUrl,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF8B4A9F).withOpacity(0.8),
+                              Color(0xFFD577A7).withOpacity(0.8),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.image,
+                            size: 64,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                // Overlay gradient
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.6),
+                      ],
+                    ),
                   ),
                 ),
                 if (news.isImportant)

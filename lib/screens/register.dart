@@ -127,10 +127,13 @@ class _MunicipalRegisterPageState extends State<MunicipalRegisterPage> {
               ),
             ],
           ),
-          child: Icon(
-            Icons.location_city,
-            color: Color(0xFF8B4A9F),
-            size: 40,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/icon/icon.png',
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
         
